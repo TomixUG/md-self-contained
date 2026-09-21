@@ -18,14 +18,25 @@ Run the script from your terminal and pass your markdown file as an argument:
 python embed_images.py /path/to/your/file.md
 ```
 
-The script will generate a new file in the same directory called `file.embedded.md`.
+By default, the script will generate a new file in the same directory called `file.embedded.md`.
+
+You can specify a custom output directory using the `-o` or `--output-folder` flag:
+
+```bash
+python embed_images.py /path/to/your/file.md -o /path/to/output/folder
+```
+
+To see all available options, run:
+```bash
+python embed_images.py --help
+```
 
 ## Testing
 
-A suite of unit tests is included to verify that image references and the Obsidian vault directory crawler work correctly. 
+A suite of unit tests is included to verify that image references, the Obsidian vault directory crawler, and the CLI arguments work correctly. 
 
 Run the tests using standard `unittest`:
 
 ```bash
-python -m unittest test_embed_images.py
+python -m unittest tests/test_embed_images.py
 ```
