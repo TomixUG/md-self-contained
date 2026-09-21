@@ -99,12 +99,15 @@ def embed_images_in_markdown(md_content, base_dir='.'):
     
     return content
 
+import argparse
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python embed_images.py <markdown_file>")
-        sys.exit(1)
-        
-    input_file = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Embed images into markdown as base64.")
+    parser.add_argument("markdown_file", help="The markdown file to process.")
+    parser.add_argument("-o", "--output-folder", help="Specify an output folder for the embedded markdown file.")
+    args = parser.parse_args()
+    
+    input_file = args.markdown_file
     
     if not os.path.exists(input_file):
         print(f"Error: File '{input_file}' not found.")
@@ -116,10 +119,22 @@ def main():
     base_dir = os.path.dirname(os.path.abspath(input_file))
     result = embed_images_in_markdown(content, base_dir)
     
-    if input_file.lower().endswith('.md'):
-        output_file = input_file[:-3] + '.embedded.md'
+    basename = os.path.basename(input_file)
+    if basename.lower().endswith('.md'):
+        out_name = basename[:-3] + '.embedded.md'
     else:
-        output_file = input_file + '.embedded.md'
+        out_name = basename + '.embedded.md'
+        
+    if args.output_folder:
+        if not os.path.exists(args.output_folder):
+            os.makedirs(args.output_folder)
+        output_file = os.path.join(args.output_folder, out_name)
+    else:
+        # Default to the same directory as the input file, or current if it's just a filename
+        input_dir = os.path.dirname(input_file)
+        if not input_dir:
+            input_dir = '.'
+        output_file = os.path.join(input_dir, out_name)
         
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(result)
