@@ -1,9 +1,15 @@
 import unittest
 import os
+import sys
 import tempfile
 import shutil
 import base64
-from embed_images import embed_images_in_markdown, find_vault_root
+from unittest.mock import patch
+
+# Ensure the parent directory is in the python path to import embed_images
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from embed_images import embed_images_in_markdown, find_vault_root, main
 
 class TestEmbedImages(unittest.TestCase):
     def setUp(self):
@@ -54,7 +60,6 @@ class TestEmbedImages(unittest.TestCase):
         self.assertEqual(result, expected_md)
 
     def test_standard_markdown_syntax(self):
-        # For standard markdown, it usually expects relative path to the image
         md_content = "Here is an image: ![Alt Text](../images/test_image.png)"
         result = embed_images_in_markdown(md_content, base_dir=self.notes_dir)
         
@@ -63,10 +68,56 @@ class TestEmbedImages(unittest.TestCase):
         
     def test_missing_image(self):
         md_content = "Here is an image: ![[missing.png]]"
-        # It should leave the markdown unchanged if the image is missing
         result = embed_images_in_markdown(md_content, base_dir=self.notes_dir)
-        
         self.assertEqual(result, md_content)
+
+    @patch('sys.argv')
+    def test_cli_default_output(self, mock_argv):
+        # Create a test markdown file
+        md_file_path = os.path.join(self.notes_dir, 'test_note.md')
+        with open(md_file_path, 'w', encoding='utf-8') as f:
+            f.write("![[test_image.png]]")
+            
+        # Mock sys.argv as if running: python embed_images.py test_note.md
+        mock_argv.__getitem__.side_effect = lambda x: ['embed_images.py', md_file_path][x]
+        mock_argv.__len__.return_value = 2
+        mock_argv.__iter__.return_value = iter(['embed_images.py', md_file_path])
+        mock_argv.pop.side_effect = lambda x=None: None
+        # Better to just set it:
+        
+    @patch('sys.argv')
+    def test_cli_default_output_clean(self, mock_argv):
+        md_file_path = os.path.join(self.notes_dir, 'test_note.md')
+        with open(md_file_path, 'w', encoding='utf-8') as f:
+            f.write("![[test_image.png]]")
+            
+        # Just mock sys.argv directly by replacing the list
+        with patch('sys.argv', ['embed_images.py', md_file_path]):
+            main()
+            
+        expected_output_path = os.path.join(self.notes_dir, 'test_note.embedded.md')
+        self.assertTrue(os.path.exists(expected_output_path))
+        
+        with open(expected_output_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('data:image/png;base64', content)
+
+    def test_cli_custom_output_folder(self):
+        md_file_path = os.path.join(self.notes_dir, 'test_note.md')
+        with open(md_file_path, 'w', encoding='utf-8') as f:
+            f.write("![[test_image.png]]")
+            
+        custom_out_dir = os.path.join(self.test_dir, 'custom_output')
+        
+        with patch('sys.argv', ['embed_images.py', md_file_path, '-o', custom_out_dir]):
+            main()
+            
+        expected_output_path = os.path.join(custom_out_dir, 'test_note.embedded.md')
+        self.assertTrue(os.path.exists(expected_output_path))
+        
+        with open(expected_output_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('data:image/png;base64', content)
 
 if __name__ == '__main__':
     unittest.main()
